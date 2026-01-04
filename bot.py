@@ -552,6 +552,32 @@ def resolve_paths(cfg: Dict[str, Any]) -> Tuple[str, str, str]:
     return state_file, journal_file, log_file
 
 
+def validate_config(cfg: Dict[str, Any]) -> None:
+    required_sections = ["exchange", "trading", "strategy", "risk", "fees", "guardrails", "execution", "runtime", "misc"]
+    for sec in required_sections:
+        if sec not in cfg:
+            raise ValueError(f"Missing config section: {sec}")
+
+    trading = cfg.get("trading") or {}
+    strategy = cfg.get("strategy") or {}
+    risk = cfg.get("risk") or {}
+    runtime = cfg.get("runtime") or {}
+
+    if not trading.get("symbol"):
+        raise ValueError("Config trading.symbol is required")
+
+    for key in ["ma_fast_period", "ma_mid_period", "ma_slow_period"]:
+        if safe_float(strategy.get(key), None) is None:
+            raise ValueError(f"Config strategy.{key} must be numeric")
+
+    for key in ["stop_loss_percent", "take_profit_percent"]:
+        if safe_float(risk.get(key), None) is None:
+            raise ValueError(f"Config risk.{key} must be numeric")
+
+    if int(runtime.get("poll_seconds", 1)) <= 0:
+        raise ValueError("Config runtime.poll_seconds must be > 0")
+
+
 # ---------- state (multi-position) ----------
 def _default_position(slot_id: int) -> Dict[str, Any]:
     return {
@@ -619,6 +645,7 @@ def main():
     args = ap.parse_args()
 
     cfg = load_json(args.config)
+    validate_config(cfg)
 
     # resolve instance-safe paths
     state_file, journal_file, log_file = resolve_paths(cfg)
@@ -645,6 +672,7 @@ def main():
     max_entry_distance_ma_mid_pct = float(strat.get("max_entry_distance_above_ma_mid_percent", 1.2)) / 100.0
     allow_range_entries = bool(strat.get("allow_range_entries", True))
     range_reentry_cooldown_seconds = int(strat.get("range_reentry_cooldown_seconds", 20))
+    range_reentry_cooldown_seconds = min(60, max(0, range_reentry_cooldown_seconds))
     min_fast_slope_bps = float(strat.get("min_fast_slope_bps", 2.0))
     volatility_atr_period = max(1, int(strat.get("volatility_atr_period", 14)))
     min_atr_percent = _validated_percent(strat.get("min_atr_percent", 0.15), 0.15, "min_atr_percent", log)
@@ -1174,6 +1202,28 @@ def main():
                         log("WARN", f"Amount {base_amount} < min amount {min_amount}.")
                         time.sleep(poll_seconds)
                         continue
+
+                    if viability_enabled:
+                        viable_now = profit_viable(
+                            entry_price=last_price,
+                            take_profit_pct=take_profit_pct + viability_margin_pct,
+                            fee_rate=fee_rate,
+                            slippage_buffer_pct=slippage_buffer_pct,
+                            spread_buffer_pct=spread_buffer_pct,
+                            min_net_profit_pct=min_net_profit_pct,
+                        )
+                        if not viable_now:
+                            log(
+                                "INFO",
+                                (
+                                    "VIABILITY BLOCK (pre-order) | expected net profit below minimum "
+                                    f"(TP target={(take_profit_pct + viability_margin_pct)*100:.2f}% "
+                                    f"minNet={min_net_profit_pct*100:.2f}% spreadBuf={spread_buffer_pct*100:.3f}% "
+                                    f"slipBuf={slippage_buffer_pct*100:.3f}% fee={fee_rate*100:.3f}%)"
+                                ),
+                            )
+                            time.sleep(poll_seconds)
+                            continue
 
                     state["trade_seq"] = int(state.get("trade_seq", 0)) + 1
                     slot_id = int(slot.get("slot_id", 0))
