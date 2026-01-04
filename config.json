@@ -1,0 +1,98 @@
+{
+  "exchange": {
+    "id": "binance",
+    "market_type": "spot",
+    "api_key": "PUT_BINANCE_API_KEY",
+    "api_secret": "PUT_BINANCE_API_SECRET",
+    "adjust_for_time_difference": true,
+    "sandbox": false
+  },
+  "trading": {
+    "symbol": "XRP/USDC",
+    "timeframe": "1m",
+    "base_asset": "XRP",
+    "quote_asset": "USDC",
+    "budget_mode": "fixed_quote",
+    "trade_quote_amount_usdc": 12.0,
+    "compounding_enabled": false
+  },
+  "strategy": {
+    "ma_fast_period": 6,
+    "ma_mid_period": 18,
+    "ma_slow_period": 60,
+    "require_price_above_ma_mid": false,
+    "max_entry_distance_above_ma_mid_percent": 1.1,
+    "allow_range_entries": true,
+    "range_reentry_cooldown_seconds": 20,
+    "min_fast_slope_bps": 1.0,
+    "volatility_atr_period": 14,
+    "min_atr_percent": 0.05,
+    "max_atr_percent": 2.0
+  },
+  "risk": {
+    "stop_loss_percent": 0.55,
+    "take_profit_percent": 0.65,
+    "time_exit_enabled": true,
+    "max_hold_minutes": 4,
+    "trailing_take_profit": {
+      "enabled": true,
+      "trail_distance_percent": 0.18,
+      "activate_after_profit_percent": 0.3
+    },
+    "cooldown_seconds_after_close": 10,
+    "min_seconds_between_orders": 2,
+    "min_seconds_between_entries": 60,
+    "loss_cooldown": {
+      "enabled": true,
+      "max_consecutive_losses": 2,
+      "cooldown_minutes": 1
+    }
+  },
+  "fees": {
+    "assumed_fee_rate": 0.001,
+    "min_net_profit_percent": 0.28,
+    "breakeven_lock_percent": 0.1,
+    "slippage_buffer_percent": 0.06
+  },
+  "guardrails": {
+    "net_profit_viability": {
+      "enabled": true,
+      "extra_margin_percent": 0.05
+    },
+    "spread_filter": {
+      "enabled": true,
+      "max_spread_bps": 18.0
+    },
+    "fee_reserve": {
+      "enabled": true,
+      "min_quote_reserve": 2.0
+    }
+  },
+  "execution": {
+    "execution_mode": "maker_first",
+    "maker_timeout_seconds": 10,
+    "maker_poll_seconds": 1,
+    "fallback_to_market": true,
+    "max_fallback_slippage_bps": 12.0,
+    "maker_price_offset_bps": 0.0
+  },
+  "alerts": {
+    "telegram": {
+      "enabled": true,
+      "bot_token": "PUT_TELEGRAM_BOT_TOKEN",
+      "chat_id": "PUT_TELEGRAM_CHAT_ID"
+    }
+  },
+  "runtime": {
+    "poll_seconds": 1,
+    "candles_limit": 240,
+    "max_retries": 3,
+    "retry_delay_seconds": 1.5,
+    "heartbeat_minutes": 10,
+    "dry_run": false,
+    "log_dir": "logs"
+  },
+  "misc": {
+    "instance_id": "BOT3_XRP_V12"
+  }
+}
